@@ -1,0 +1,53 @@
+---
+- name: install fmserver packages
+  apt:
+    name: "{{ fmserver_packages }}"
+    state: "present"
+    update_cache: true
+
+- name: Create FMServer extracted directory
+  file:
+    path: "/opt/fmsinstallfiles/fms_extracted"
+    state: directory
+
+- name: Download FMS Binary
+  get_url:
+    url: "https://downloads.claris.com/esd/fms_xxxxxxx-reald-download-link_Ubuntu20.zip"
+    dest: /opt/fmsinstallfiles/
+    mode: '0440'
+
+- name: Extract FMServer ZIP
+  ansible.builtin.unarchive:
+    copy: no
+    creates: /opt/fmsinstallfiles/fms_extracted/README_Installation_German.txt
+    src: "/opt/fmsinstallfiles/fms_19.6.3.302_Ubuntu20.zip"
+    dest: /opt/fmsinstallfiles/fms_extracted
+    
+
+- name: Write /opt/fmsinstallfiles/fms_extracted/Assisted Install.txt
+  template:
+    src: "templates/Assisted Install.txt.j2"
+    dest: "/opt/fmsinstallfiles/fms_extracted/Assisted Install.txt"
+
+- name: Check if FileMaker Server is already installed
+  stat:
+      path: "/opt/FileMaker/FileMaker Server/Database Server/bin/fmsadmin"
+  register: fms_is_installed
+
+- name: Install FileMaker Server
+  ansible.builtin.shell: FM_ASSISTED_INSTALL="/opt/fmsinstallfiles/fms_extracted/Assisted Install.txt" apt -y install ./filemaker-server-19.6.3.302-amd64.deb 
+  args:
+    chdir: /opt/fmsinstallfiles/fms_extracted/
+  when: not fms_is_installed.stat.exists
+
+- name: Disable default backup schedule
+  ansible.builtin.shell: fmsadmin disable schedule 1 -y -u fmadmin -p {{ fms_admin_console_password }} 
+  when: not fms_is_installed.stat.exists
+
+- name: Reboot after FMS Installation (Wait for 5 min)
+  reboot:
+    reboot_timeout: 300
+  when: not fms_is_installed.stat.exists
+
+    
+    

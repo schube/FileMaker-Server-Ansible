@@ -1,0 +1,16 @@
+all:
+  hosts:
+
+    fms-demo:
+      ansible_python_interpreter: /usr/bin/python3
+      ansible_host: 1.2.3.4
+      ansible_port: 22
+      hostname: demo.fm-server.net
+      fms_admin_console_password: password-here
+      fms_admin_console_pin: 1111
+
+  children:
+
+    fmserver:
+      hosts:    
+        fms-demo:
